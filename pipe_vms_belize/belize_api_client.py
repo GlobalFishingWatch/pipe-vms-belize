@@ -15,13 +15,14 @@ from shutil import rmtree
 
 from pathlib import Path
 
-import argparse, linecache, gzip, json, os, re, requests, sys, time
+import argparse, linecache, gzip, html, os, re, requests, sys, time
 
 
 # BELIZE ENDPOINT
 SecurityToken = 'fdd361ee-39cc-43b3-9cae-0d522b1e2def'
 ClientName = 'Belize+Vessel+Monitoring+%26+Safety+Project'
-ENDPOINT = 'https://cssi-tracking.com/WS/WSTrack2.asmx/GetCurrentPositionByClientName'
+# ENDPOINT = 'https://cssi-tracking.com/WS/WSTrack2.asmx/GetCurrentPositionByClientName'
+ENDPOINT = f'https://cssi-tracking.com/WS/WSTrack2.asmx/GetCurrentPositionByClientName?SecurityToken={SecurityToken}&ClientName={ClientName}'
 
 # FORMATS
 FORMAT_DT = '%Y-%m-%d'
@@ -46,9 +47,11 @@ def query_data(query_date, wait_time_between_api_calls, file_path, max_retries):
     success=False
     # belize_positions_date_url = ENDPOINT + query_date
     belize_positions_date_url = ENDPOINT
+    # parameters={
+    #     'SecurityToken': f'{SecurityToken}',
+    #     'ClientName': f'{ClientName}'
+    # }
     parameters={
-        'SecurityToken': f'{SecurityToken}',
-        'ClientName': f'{ClientName}'
     }
     headers = {
         'Content-Type': 'text/xml',
@@ -59,15 +62,18 @@ def query_data(query_date, wait_time_between_api_calls, file_path, max_retries):
             print('Request to Belize endpoint {}'.format(belize_positions_date_url))
             response = requests.get(belize_positions_date_url, data=parameters, headers=headers)
             if response.status_code == requests.codes.ok:
-                data = response.json()
+                data = response.text
                 total += len(data)
                 print("The total of array data received is {0}. Retries <{1}>".format(total, retries))
 
+                data = html.unescape(data)
+                new_data = ""
+                for line in data:
+                    new_data += line.replace('\r\n','\n')
+                data = new_data
                 print('Saving messages to <{}>.'.format(file_path))
                 with gzip.open(file_path, 'at', compresslevel=9) as outfile:
-                    for message in data:
-                        json.dump(message, outfile)
-                        outfile.write("\n")
+                    outfile.write(f"{data}\n")
                 print('All messages were saved.')
                 success=True
             else:
@@ -129,14 +135,14 @@ if __name__ == '__main__':
                         'between calls to their API for vessel positions. Measured in'
                         'seconds.', required=False, default=5.0, type=float)
     parser.add_argument('-rtr','--max_retries', help='The amount of retries'
-                        'after an error got from the API.', required=False, default=3)
+                        'after an error got from the API.', required=False, default=1)
     args = parser.parse_args()
     query_date = datetime.strptime(args.query_date, FORMAT_DT)
     output_directory= args.output_directory
     wait_time_between_api_calls = args.wait_time_between_api_calls
     max_retries = int(args.max_retries)
 
-    file_path = "%s/%s.json.gz" % (DOWNLOAD_PATH, query_date.strftime(FORMAT_DT))
+    file_path = "%s/%s.xml.gz" % (DOWNLOAD_PATH, query_date.strftime(FORMAT_DT))
 
     start_time = time.time()
 
@@ -146,9 +152,9 @@ if __name__ == '__main__':
     query_data(query_date.strftime(FORMAT_DT), wait_time_between_api_calls, file_path, max_retries)
 
     # Saves to GCS
-    gcs_transfer(file_path, output_directory)
+    # gcs_transfer(file_path, output_directory)
 
-    rmtree(DOWNLOAD_PATH)
+    # rmtree(DOWNLOAD_PATH)
 
     ### ALL DONE
     print("All done, you can find the output file here: {0}".format(output_directory))

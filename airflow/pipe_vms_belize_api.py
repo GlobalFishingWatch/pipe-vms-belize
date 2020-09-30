@@ -69,7 +69,7 @@ class PipeVMSBelizeDagFactory(DagFactory):
                 'retries':5,
                 'max_retry_delay': timedelta(hours=5),
                 'arguments':['load_belize_vms_data',
-                             '{{ macros.ds_add(ds, -2) }}',
+                             '{ds}'.format(**config),
                              '{belize_vms_gcs_path}'.format(**config),
                              '{project_id}:{belize_vms_bq_dataset_table}'.format(**config)]
             })

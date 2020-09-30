@@ -33,7 +33,7 @@ done
 #################################################################
 TABLE_DESTINATION="${BQ_PATH}\$${QUERIED_DATE//-/}"
 GCS_SOURCE="${GCS_PATH}/${QUERIED_DATE}.json.gz"
-CLUSTER_BY="mmsi,idnave,matriculanave,nombrenave"
+CLUSTER_BY=""
 
 #################################################################
 # Cleaned the table in case it exists. (--replace)
@@ -49,11 +49,10 @@ echo "Successfully removed the partition of the table <${TABLE_DESTINATION}>."
 #################################################################
 # Iterate and Load all JSON from GCS to BQ
 #################################################################
-echo "Load JSON GZIPPED <${GCS_SOURCE}> to bigquery PARTITIONED [clustered by ${CLUSTER_BY}] <${TABLE_DESTINATION}>"
+echo "Load JSON GZIPPED <${GCS_SOURCE}> to bigquery PARTITIONED <${TABLE_DESTINATION}>"
 bq load \
   --source_format=NEWLINE_DELIMITED_JSON \
   --time_partitioning_type=DAY \
-  --clustering_fields "${CLUSTER_BY}" \
   ${TABLE_DESTINATION} \
   ${GCS_SOURCE} \
   ${ASSETS}/schemas/belize_schema.json
@@ -63,7 +62,7 @@ then
   echo "ERROR uploading JSON from GCS <${GCS_SOURCE}> to BQ ${TABLE_DESTINATION}."
   exit ${RESULT}
 else
-  echo "Success: The upload from <${GCS_SOURCE}> -> PARTITIONED [clustered by ${CLUSTER_BY}] <${TABLE_DESTINATION}> was completed."
+  echo "Success: The upload from <${GCS_SOURCE}> -> PARTITIONED <${TABLE_DESTINATION}> was completed."
 fi
 
 
@@ -75,7 +74,6 @@ TABLE_DESC=(
   "*"
   "* Source: ${GCS_SOURCE} "
   "* Date Processed: ${QUERIED_DATE}"
-  "* Clusterd by ${CLUSTER_BY}."
 )
 TABLE_DESC=$( IFS=$'\n'; echo "${TABLE_DESC[*]}" )
 bq update --description "${TABLE_DESC}" ${BQ_PATH}

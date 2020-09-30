@@ -3,8 +3,10 @@ Belize API Client
 
 This script will do:
 1- Creates a local directory where to download the data.
-2- Request the ENDPOINT and download the data in GZIP format.
-3- Upload the file to GCS.
+2- Request the ENDPOINT and download the data in XML format.
+3- Saves the original XML compress by GZIP.
+4- Converts the XML to a NEWLINEJSON and compress with GZIP.
+5- Upload the files to GCS.
 """
 
 from datetime import datetime, timedelta
@@ -15,13 +17,14 @@ from shutil import rmtree
 
 from pathlib import Path
 
-import argparse, linecache, gzip, html, os, re, requests, sys, time
+from pipe_vms_belize.xml2json import xml2json
+
+import argparse, gzip, html, json, linecache, os, re, requests, sys, time, tempfile
 
 
 # BELIZE ENDPOINT
 SecurityToken = 'fdd361ee-39cc-43b3-9cae-0d522b1e2def'
 ClientName = 'Belize+Vessel+Monitoring+%26+Safety+Project'
-# ENDPOINT = 'https://cssi-tracking.com/WS/WSTrack2.asmx/GetCurrentPositionByClientName'
 ENDPOINT = f'https://cssi-tracking.com/WS/WSTrack2.asmx/GetCurrentPositionByClientName?SecurityToken={SecurityToken}&ClientName={ClientName}'
 
 # FORMATS
@@ -33,6 +36,7 @@ DOWNLOAD_PATH = "download"
 def query_data(query_date, wait_time_between_api_calls, file_path, max_retries):
     """
     Queries the Belize API.
+
     :param query_date: The date to be queried format YYYY-MM-DD.
     :type query_date: str
     :param wait_time_between_api_calls: Time between API calls, seconds.
@@ -66,15 +70,10 @@ def query_data(query_date, wait_time_between_api_calls, file_path, max_retries):
                 total += len(data)
                 print("The total of array data received is {0}. Retries <{1}>".format(total, retries))
 
-                data = html.unescape(data)
-                new_data = ""
-                for line in data:
-                    new_data += line.replace('\r\n','\n')
-                data = new_data
                 print('Saving messages to <{}>.'.format(file_path))
-                with gzip.open(file_path, 'at', compresslevel=9) as outfile:
+                with gzip.open(file_path, 'wt', compresslevel=9) as outfile:
                     outfile.write(f"{data}\n")
-                print('All messages were saved.')
+                print('All messages from request were saved.')
                 success=True
             else:
                 print("Request did not return successful code: {0} retrying.".format(response.status_code))
@@ -100,6 +99,7 @@ def query_data(query_date, wait_time_between_api_calls, file_path, max_retries):
 def create_directory(name):
     """
     Creates a directory in the filesystem.
+
     :param name: The name of the directory.
     :type name: str
     """
@@ -109,6 +109,7 @@ def create_directory(name):
 def gcs_transfer(pattern_file, gcs_path):
     """
     Uploads the files from file system to a GCS destination.
+
     :param pattern_file: The pattern file without wildcard.
     :type pattern_file: str
     :param gcs_path: The absolute path of GCS.
@@ -122,6 +123,36 @@ def gcs_transfer(pattern_file, gcs_path):
         blob = bucket.blob(gcs_search.group(2) + filename.name)
         blob.upload_from_filename(filename)
         print("File from file system <{}> uploaded to <{}>.".format(filename, gcs_path))
+
+def interpret_bad_formed_xml(xml_gzip_path, json_gzip_path):
+    """
+    Reads the GZIP xml get from the request, makes it readable, converts to
+    a NEWLINEJSON format and compress that JSON using GZIP.
+
+    :param xml_gzip_path: The path to the gzip file that has the xml.
+    :type xml_gzip_path: str.
+    :param json_gzip_path: The path to the gzip file that will have the JSON.
+    :type json_gzip_path: str.
+    """
+    xml_temp = tempfile.NamedTemporaryFile()
+    with open(xml_gzip_path, 'rb') as gzipped:
+            data = html.unescape(gzip.decompress(gzipped.read()).decode('utf-8'))
+            data_without_carriagereturn = ""
+            for line in data:
+                data_without_carriagereturn += line.replace('\r','')
+            xml_temp.write(data_without_carriagereturn.encode('utf-8'))
+
+    json_temp = tempfile.NamedTemporaryFile()
+    xml2json(xml_temp.name, json_temp.name)
+
+    # Have a NEWLINEJSON
+    with open(json_temp.name, 'rb') as json_file:
+        json_data = json.load(json_file)
+        with gzip.open(json_gzip_path, 'wt', compresslevel=9) as outfile:
+            for json_line in json_data['string']['NewDataSet']['Table']:
+                outfile.write(json.dumps(json_line))
+                outfile.write("\n")
+    print('Saving messages to <{}>.'.format(json_gzip_path))
 
 
 if __name__ == '__main__':
@@ -143,6 +174,7 @@ if __name__ == '__main__':
     max_retries = int(args.max_retries)
 
     file_path = "%s/%s.xml.gz" % (DOWNLOAD_PATH, query_date.strftime(FORMAT_DT))
+    json_path = "%s/%s.json.gz" % (DOWNLOAD_PATH, query_date.strftime(FORMAT_DT))
 
     start_time = time.time()
 
@@ -151,10 +183,14 @@ if __name__ == '__main__':
     # Executes the query
     query_data(query_date.strftime(FORMAT_DT), wait_time_between_api_calls, file_path, max_retries)
 
-    # Saves to GCS
-    # gcs_transfer(file_path, output_directory)
+    # Creates GZIP JSON from GZIP XML
+    interpret_bad_formed_xml(file_path, json_path)
 
-    # rmtree(DOWNLOAD_PATH)
+    # Saves to GCS
+    gcs_transfer(file_path, output_directory)
+    gcs_transfer(json_path, output_directory)
+
+    rmtree(DOWNLOAD_PATH)
 
     ### ALL DONE
     print("All done, you can find the output file here: {0}".format(output_directory))

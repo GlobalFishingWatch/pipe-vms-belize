@@ -18,7 +18,8 @@ DEPENDENCIES = [
     "google-cloud-storage==1.22.0",
     "jinja2-cli",
     "pipe-tools==3.1.2",
-    "requests==2.24.0"
+    "requests==2.24.0",
+    "xmltodict==0.12.0"
 ]
 
 with codecs.open('README.md', encoding='utf-8') as f:

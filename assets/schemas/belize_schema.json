@@ -1,62 +1,62 @@
 [
    {
-      "name":"fechaqth",
+      "name":"ItemName",
       "type":"STRING",
       "mode":"required",
-      "description": "The date when the position was recorded."
+      "description": "The name of the vessel."
    },
    {
-      "name":"idnave",
+      "name":"ItemID",
       "type":"INTEGER",
       "mode":"nullable",
-      "description": "The vessel identification."
+      "description": "The ID of the vessel."
    },
    {
-      "name":"idqth",
+      "name":"IMEI",
       "type":"INTEGER",
       "mode":"nullable",
-      "description": "The qth identification."
+      "description": "The IMEI of the vessel."
    },
    {
-      "name":"latitud",
+      "name":"ActualDate",
+      "type":"STRING",
+      "mode":"nullable",
+      "description": "The date at that moment."
+   },
+   {
+      "name":"Lat",
       "type":"STRING",
       "mode":"nullable",
       "description": "The latitude where the vessel was at that moment."
    },
    {
-      "name":"longuitud",
+      "name":"Lon",
       "type":"STRING",
       "mode":"nullable",
       "description": "The longitude where the vessel was at that moment."
    },
    {
-      "name":"matriculanave",
+      "name":"Cause",
       "type":"STRING",
       "mode":"nullable",
-      "description": "The plate of the vessel."
+      "description": "The cause of the vessel."
    },
    {
-      "name":"mmsi",
+      "name":"TriggerValue",
       "type":"STRING",
       "mode":"nullable",
-      "description": "The mmsi."
+      "description": "The trigger value."
    },
    {
-      "name":"nombrenave",
+      "name":"EntityType",
       "type":"STRING",
       "mode":"nullable",
-      "description": "The name of the vessel."
+      "description": "The kind of vessel."
    },
    {
-      "name":"rumbo",
+      "name":"Tag",
       "type":"INTEGER",
       "mode":"nullable",
-      "description": "The direction where the vessel goes."
-   },
-   {
-      "name":"velocidad",
-      "type":"INTEGER",
-      "mode":"nullable",
-      "description": "The speed of the vessel."
+      "description": "The tag of the vessel."
    }
 ]

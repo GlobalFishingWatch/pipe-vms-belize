@@ -1,0 +1,62 @@
+[
+   {
+      "name":"fechaqth",
+      "type":"STRING",
+      "mode":"required",
+      "description": "The date when the position was recorded."
+   },
+   {
+      "name":"idnave",
+      "type":"INTEGER",
+      "mode":"nullable",
+      "description": "The vessel identification."
+   },
+   {
+      "name":"idqth",
+      "type":"INTEGER",
+      "mode":"nullable",
+      "description": "The qth identification."
+   },
+   {
+      "name":"latitud",
+      "type":"STRING",
+      "mode":"nullable",
+      "description": "The latitude where the vessel was at that moment."
+   },
+   {
+      "name":"longuitud",
+      "type":"STRING",
+      "mode":"nullable",
+      "description": "The longitude where the vessel was at that moment."
+   },
+   {
+      "name":"matriculanave",
+      "type":"STRING",
+      "mode":"nullable",
+      "description": "The plate of the vessel."
+   },
+   {
+      "name":"mmsi",
+      "type":"STRING",
+      "mode":"nullable",
+      "description": "The mmsi."
+   },
+   {
+      "name":"nombrenave",
+      "type":"STRING",
+      "mode":"nullable",
+      "description": "The name of the vessel."
+   },
+   {
+      "name":"rumbo",
+      "type":"INTEGER",
+      "mode":"nullable",
+      "description": "The direction where the vessel goes."
+   },
+   {
+      "name":"velocidad",
+      "type":"INTEGER",
+      "mode":"nullable",
+      "description": "The speed of the vessel."
+   }
+]

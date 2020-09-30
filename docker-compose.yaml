@@ -1,0 +1,30 @@
+version: '2'
+services:
+  pipe_vms_belize:
+    image: gfw/pipe-vms-belize
+    build: .
+    volumes:
+      - ".:/opt/project"
+      - "gcp:/root/.config/"
+
+  gcloud:
+    image: gfw/pipe-vms-belize
+    build: .
+    entrypoint: gcloud
+    volumes:
+      - "gcp:/root/.config/"
+
+  bash:
+    image: gfw/pipe-vms-belize
+    build: .
+    entrypoint: bash
+    volumes:
+      - ".:/opt/project"
+      - "gcp:/root/.config/"
+
+# Use an external named volume so that we can share gcp auth across containers
+# Before first use, this volume must be manually created with
+#   docker volume create --name=gcp
+volumes:
+  gcp:
+    external: true

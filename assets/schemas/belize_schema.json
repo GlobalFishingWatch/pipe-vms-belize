@@ -19,31 +19,31 @@
    },
    {
       "name":"ActualDate",
-      "type":"STRING",
+      "type":"TIMESTAMP",
       "mode":"nullable",
       "description": "The date at that moment."
    },
    {
       "name":"Lat",
-      "type":"STRING",
+      "type":"FLOAT",
       "mode":"nullable",
       "description": "The latitude where the vessel was at that moment."
    },
    {
       "name":"Lon",
-      "type":"STRING",
+      "type":"FLOAT",
       "mode":"nullable",
       "description": "The longitude where the vessel was at that moment."
    },
    {
       "name":"Direction",
-      "type":"STRING",
+      "type":"FLOAT",
       "mode":"nullable",
       "description": "The direction where the vessel was pointing at that moment."
    },
    {
       "name":"Speed",
-      "type":"STRING",
+      "type":"FLOAT",
       "mode":"nullable",
       "description": "The direction where the vessel was pointing at that moment."
    },

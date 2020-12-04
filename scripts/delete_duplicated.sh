@@ -36,6 +36,17 @@ SQL=${ASSETS}/sql/deduplicate.sql.j2
 SCHEMA=${ASSETS}/schemas/belize_dedup_schema.json
 
 #################################################################
+# Cleaned the table in case it exists. (--replace)
+#################################################################
+echo "Clean the partition of the table <${TABLE_DESTINATION}> in case it already exists."
+bq rm -f -t "${TABLE_DESTINATION}"
+if [ "$?" -ne 0 ]; then
+  echo "  ERROR Partition of table <${TABLE_DESTINATION}> can not be removed."
+  exit 1
+fi
+echo "Successfully removed the partition of the table <${TABLE_DESTINATION}>."
+
+#################################################################
 # Get the non duplicated records
 #################################################################
 echo "Delete the duplicated records and save to bigquery PARTITIONED <${TABLE_DESTINATION}>"
@@ -43,7 +54,6 @@ jinja2 ${SQL} \
   -D source=${BQ_SOURCE//:/.} \
   -D date=${QUERIED_DATE} \
   | bq query \
-    --replace \
     --allow_large_results \
     --use_legacy_sql=false \
     --max_rows=0 \

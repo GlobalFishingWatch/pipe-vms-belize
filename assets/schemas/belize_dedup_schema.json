@@ -1,0 +1,50 @@
+[
+   {
+      "name":"ItemName",
+      "type":"STRING",
+      "mode":"nullable",
+      "description": "The name of the vessel."
+   },
+   {
+      "name":"ItemID",
+      "type":"INTEGER",
+      "mode":"nullable",
+      "description": "The ID of the vessel."
+   },
+   {
+      "name":"IMEI",
+      "type":"INTEGER",
+      "mode":"nullable",
+      "description": "The IMEI of the vessel."
+   },
+   {
+      "name":"ActualDate",
+      "type":"TIMESTAMP",
+      "mode":"nullable",
+      "description": "The date at that moment."
+   },
+   {
+      "name":"Lat",
+      "type":"FLOAT",
+      "mode":"nullable",
+      "description": "The latitude where the vessel was at that moment."
+   },
+   {
+      "name":"Lon",
+      "type":"FLOAT",
+      "mode":"nullable",
+      "description": "The longitude where the vessel was at that moment."
+   },
+   {
+      "name":"Direction",
+      "type":"FLOAT",
+      "mode":"nullable",
+      "description": "The direction where the vessel was pointing at that moment."
+   },
+   {
+      "name":"Speed",
+      "type":"FLOAT",
+      "mode":"nullable",
+      "description": "The direction where the vessel was pointing at that moment."
+   }
+]

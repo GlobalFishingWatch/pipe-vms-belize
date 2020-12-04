@@ -35,6 +35,38 @@ TABLE_DESTINATION="${BQ_DESTINATION}\$${QUERIED_DATE//-/}"
 SQL=${ASSETS}/sql/deduplicate.sql.j2
 SCHEMA=${ASSETS}/schemas/belize_dedup_schema.json
 
+################################################################################
+# Creates the partitioned table if not exists
+################################################################################
+echo "Validates the existence of the table ${BQ_DESTINATION}"
+DATASET=$(echo ${BQ_DESTINATION//:/.} | sed 's/\(.*\)\.[^\.]*$/\1/' | cut -f2 -d.)
+TABLE_NAME=$(echo ${BQ_DESTINATION//:/.} | sed 's/.*\.\([^\.]*\)$/\1/')
+echo "DATASET=${DATASET}"
+echo "TABLE_NAME=${TABLE_NAME}"
+QUERY_IF_TABLE_ALREADY_EXISTS=$(bq query --use_legacy_sql=false "SELECT size_bytes FROM ${DATASET}.__TABLES__ WHERE table_id=\"${TABLE_NAME}\"")
+if [ "$?" -ne 0 ]; then
+  echo "  Unable to verify the existence of the partitioned table for Belize."
+  exit 1
+fi
+echo
+if [ -z "${QUERY_IF_TABLE_ALREADY_EXISTS}" ]
+then
+  echo "  Table ${BQ_DESTINATION} does not exists. Creating the table.."
+  bq mk \
+    --schema ${SCHEMA} \
+    --time_partitioning_type=DAY \
+    --time_partitioning_field=ActualDate \
+    --clustering_fields IMEI \
+    ${BQ_DESTINATION}
+  if [ "$?" -ne 0 ]; then
+    echo "  (ERROR) Unable to create the partitioned table for research fishing."
+    display_usage
+    exit 1
+  else
+    echo "  (DONE). Partitioned table ${BQ_DESTINATION} is already created."
+  fi
+fi
+
 #################################################################
 # Get the non duplicated records
 #################################################################
@@ -47,11 +79,7 @@ jinja2 ${SQL} \
     --allow_large_results \
     --use_legacy_sql=false \
     --max_rows=0 \
-    --time_partitioning_type=DAY \
-    --time_partitioning_field=ActualDate \
-    --destination_table ${BQ_DESTINATION} \
-    --destination_schema ${SCHEMA} \
-    --clustering_fields IMEI
+    --destination_table ${TABLE_DESTINATION}
 RESULT=$?
 if [ "${RESULT}" -ne 0 ]
 then

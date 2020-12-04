@@ -53,6 +53,7 @@ echo "Load JSON GZIPPED <${GCS_SOURCE}> to bigquery PARTITIONED <${TABLE_DESTINA
 bq load \
   --source_format=NEWLINE_DELIMITED_JSON \
   --time_partitioning_type=DAY \
+  --clustering_fields IMEI \
   ${TABLE_DESTINATION} \
   ${GCS_SOURCE} \
   ${ASSETS}/schemas/belize_schema.json

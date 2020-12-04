@@ -74,7 +74,20 @@ class PipeVMSBelizeDagFactory(DagFactory):
                              '{project_id}:{belize_vms_bq_dataset_table}'.format(**config)]
             })
 
-            dag >> fetch >> load
+            delete_duplicated = self.build_docker_task({
+                'task_id':'pipe_belize_deduplicated',
+                'pool':'k8operators_limit',
+                'docker_run':'{docker_run}'.format(**config),
+                'image':'{docker_image}'.format(**config),
+                'name':'pipe-belize-deduplicate',
+                'dag':dag,
+                'arguments':['delete_duplicated',
+                             '{ds}'.format(**config),
+                             '{project_id}:{belize_vms_bq_dataset_table}'.format(**config),
+                             '{project_id}:{belize_vms_dedup_bq_dataset_table}'.format(**config)]
+            })
+
+            dag >> fetch >> load >> delete_duplicated
 
         return dag
 

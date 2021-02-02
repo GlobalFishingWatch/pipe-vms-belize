@@ -32,7 +32,7 @@ done
 # Set envs and buid the GCS_SOURCE
 #################################################################
 TABLE_DESTINATION="${BQ_PATH}\$${QUERIED_DATE//-/}"
-GCS_SOURCE="${GCS_PATH}/${QUERIED_DATE}.json.gz"
+GCS_SOURCE="${GCS_PATH}/${QUERIED_DATE}/${QUERIED_DATE}.json.gz"
 CLUSTER_BY=""
 
 #################################################################

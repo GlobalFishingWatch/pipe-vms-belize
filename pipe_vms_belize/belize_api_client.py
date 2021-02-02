@@ -22,23 +22,18 @@ from pipe_vms_belize.xml2json import xml2json
 import argparse, gzip, html, json, linecache, os, re, requests, sys, time, tempfile
 
 
-# BELIZE ENDPOINT
-SecurityToken = 'fdd361ee-39cc-43b3-9cae-0d522b1e2def'
-ClientName = 'Belize+Vessel+Monitoring+%26+Safety+Project'
-ENDPOINT = f'https://cssi-tracking.com/WS/WSTrack2.asmx/GetCurrentPositionByClientName?SecurityToken={SecurityToken}&ClientName={ClientName}'
-
 # FORMATS
 FORMAT_DT = '%Y-%m-%d'
 
 # FOLDER
 DOWNLOAD_PATH = "download"
 
-def query_data(query_date, wait_time_between_api_calls, file_path, max_retries):
+def query_data(endpoint, wait_time_between_api_calls, file_path, max_retries):
     """
     Queries the Belize API.
 
-    :param query_date: The date to be queried format YYYY-MM-DD.
-    :type query_date: str
+    :param endpoint: The endpoint of the Belizean API.
+    :type endpoint: str
     :param wait_time_between_api_calls: Time between API calls, seconds.
     :type wait_time_between_api_calls: int
     :param file_path: The absolute path where to store locally the data.
@@ -49,12 +44,6 @@ def query_data(query_date, wait_time_between_api_calls, file_path, max_retries):
     total=0
     retries=0
     success=False
-    # belize_positions_date_url = ENDPOINT + query_date
-    belize_positions_date_url = ENDPOINT
-    # parameters={
-    #     'SecurityToken': f'{SecurityToken}',
-    #     'ClientName': f'{ClientName}'
-    # }
     parameters={
     }
     headers = {
@@ -63,8 +52,8 @@ def query_data(query_date, wait_time_between_api_calls, file_path, max_retries):
     }
     while retries < max_retries and not success:
         try:
-            print('Request to Belize endpoint {}'.format(belize_positions_date_url))
-            response = requests.get(belize_positions_date_url, data=parameters, headers=headers)
+            print('Request to Belize endpoint {}'.format(endpoint))
+            response = requests.get(endpoint, data=parameters, headers=headers)
             if response.status_code == requests.codes.ok:
                 data = response.text
                 total += len(data)
@@ -155,8 +144,35 @@ def interpret_bad_formed_xml(xml_gzip_path, json_gzip_path):
     print('Saving messages to <{}>.'.format(json_gzip_path))
 
 
+def query_and_store(query_data, file_data):
+    """
+    Queries the endpoint, read the XML and converts to JSON, stores the XML and
+    JSON compressed to the GCS.
+
+    :param query_data: A dict with the parameters of the query.
+    :type query_data: dict.
+    :param file_data: A dict of the file data to convert and storage the results.
+    :type file_data: dict.
+    """
+    # Executes the query to get IMEI list
+    query_data(query_data.endpoint_API, query_data.wait_time_between_api_calls, file_data.file_path, query_data.retries)
+
+    # Creates GZIP JSON from GZIP XML
+    interpret_bad_formed_xml(file_data.file_path, file_data.json_path)
+
+    # Saves to GCS
+    gcs_transfer(file_data.file_path, file_data.output)
+    gcs_transfer(file_data.json_path, file_data.output)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Download all positional data of Belize Vessels for a given day.')
+    parser.add_argument('-tk_API','--security_token_API_position_by_clientname', help='The Security Token to access the Belizean WebService Current Positions by ClientName.',
+                        required=True)
+    parser.add_argument('-tk_API2','--security_token_API_position_by_daterange', help='The Security Token to access the Belizean WebService Positions by Date range.',
+                        required=True)
+    parser.add_argument('-cli','--client_name', help='The client name to request access to the Belizean WebService Current Position by ClientName',
+                        required=True)
     parser.add_argument('-d','--query_date', help='The date to be queried. Expects a str in format YYYY-MM-DD',
                         required=True)
     parser.add_argument('-o','--output_directory', help='The GCS directory'
@@ -168,27 +184,61 @@ if __name__ == '__main__':
     parser.add_argument('-rtr','--max_retries', help='The amount of retries'
                         'after an error got from the API.', required=False, default=1)
     args = parser.parse_args()
-    query_date = datetime.strptime(args.query_date, FORMAT_DT)
+    security_token_API1 = args.security_token_API_position_by_clientname
+    security_token_API2 = args.security_token_API_position_by_daterange
+    client_name = args.client_name
+    endpoint_API1 = f'https://cssi-tracking.com/WS/WSTrack2.asmx/GetCurrentPositionByClientName?securitytoken={security_token_API1}&clientname={client_name}'
+    query_date = args_query_date
+    # Validation of the query_date
+    tomorrow = (datetime.strptime(query_date, FORMAT_DT) +
+                datetime.timedelta(days=1)).strptime(FORMAT_DT)
     output_directory= args.output_directory
     wait_time_between_api_calls = args.wait_time_between_api_calls
     max_retries = int(args.max_retries)
 
-    file_path = "%s/%s.xml.gz" % (DOWNLOAD_PATH, query_date.strftime(FORMAT_DT))
-    json_path = "%s/%s.json.gz" % (DOWNLOAD_PATH, query_date.strftime(FORMAT_DT))
+    file_path = "%s/%s/%s.xml.gz" % (DOWNLOAD_PATH, query_date, query_date)
+    json_path = "%s/%s/%s.json.gz" % (DOWNLOAD_PATH, query_date, query_date)
 
     start_time = time.time()
 
     create_directory(DOWNLOAD_PATH)
 
-    # Executes the query
-    query_data(query_date.strftime(FORMAT_DT), wait_time_between_api_calls, file_path, max_retries)
+    query_and_store({
+            endpoint: endpoint_API1,
+            wait_time_between_api_calls: wait_time_between_api_calls,
+            retries: max_retries
+        },{
+            file_path: file_path,
+            json_path: json_path,
+            output: output_directory
+        }
+    )
 
-    # Creates GZIP JSON from GZIP XML
-    interpret_bad_formed_xml(file_path, json_path)
+    # Reads the json and extract a list with the unique IMEI
+    PATTERN='"IMEI": "([^"]*)"])"'
+    gz_file = gzip.GzipFile(json_path, 'rb')
+    list_only_imei = re.findall(PATTERN, gz_file.read().decode('utf-8'))
+    unique_imei_list = sorted(set(list_only_imei))
 
-    # Saves to GCS
-    gcs_transfer(file_path, output_directory)
-    gcs_transfer(json_path, output_directory)
+    for imei in unique_imei_list:
+        imei_start_time = time.time()
+        imei_file_path = "%s/%s/%s_%s.xml.gz" % (DOWNLOAD_PATH, query_date, query_date, imei)
+        imei_json_path = "%s/%s/%s_%s.json.gz" % (DOWNLOAD_PATH, query_date, query_date, imei)
+        # Here we need to read the list of IMEI that was requested and start requesting per each IMEI to the new API.
+        endpoint_API2 = f'https://cssi-tracking.com/WS/WSTrack2.asmx/GetPositionsByDateRange?securitytoken={security_token_API2}&imei={imei}&startDate={query_date}&endDate={tomorrow}'
+        query_and_store({
+                endpoint: endpoint_API2,
+                wait_time_between_api_calls: wait_time_between_api_calls,
+                retries: max_retries
+            },{
+                file_path: imei_file_path,
+                json_path: imei_json_path,
+                output: output_directory
+            }
+        )
+        print(f"IMEI {imei} you can find the output file here: {output_directory}")
+        print(f"Execution time {(time.time()-imei_start_time)/60} minutes")
+    # Finish with IMEIs list.
 
     rmtree(DOWNLOAD_PATH)
 

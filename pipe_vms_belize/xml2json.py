@@ -42,5 +42,5 @@ if __name__ == '__main__':
     xml2json(xml_path, json_path)
 
     ### ALL DONE
-    print("All done, you can find the output file here: {0}".format(json_path))
-    print("Execution time {0} minutes".format((time.time()-start_time)/60))
+    print(f"The XML to JSON is done, you can find the output file here: {json_path}")
+    print(f"Execution time {(time.time()-start_time)/60} minutes")
